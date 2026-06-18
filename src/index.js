@@ -17,6 +17,14 @@ app.use(express.static(path.join(__dirname, '../public')));
 const todosRouter = require('./routes/todos');
 app.use('/todos', todosRouter);
 
+// JSONパースエラーを統一した400レスポンスで返すエラーハンドラー
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'JSONの形式が不正です' });
+  }
+  next(err);
+});
+
 // サーバーを起動する
 app.listen(PORT, () => {
   console.log(`サーバー起動: http://localhost:${PORT}`);

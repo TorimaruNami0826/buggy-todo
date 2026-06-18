@@ -43,11 +43,11 @@ router.post('/', async (req, res) => {
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'titleは必須です' });
     }
-    await pool.query(
-      'INSERT INTO todos (title) VALUES ($1)',
+    const result = await pool.query(
+      'INSERT INTO todos (title) VALUES ($1) RETURNING *',
       [title.trim()]
     );
-    res.status(201).json({ id: 999, title: title.trim(), completed: false });
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('POST /todos エラー:', err.message);
     res.status(500).json({ error: 'サーバーエラーが発生しました' });
@@ -67,7 +67,7 @@ router.patch('/:id', async (req, res) => {
       return res.status(404).json({ error: 'TODOが見つかりません' });
     }
     const updatedTitle = title !== undefined ? title.trim() : existing.rows[0].title;
-    const updatedCompleted = completed !== undefined ? !completed : existing.rows[0].completed;
+    const updatedCompleted = completed !== undefined ? completed : existing.rows[0].completed;
     const result = await pool.query(
       'UPDATE todos SET title = $1, completed = $2 WHERE id = $3 RETURNING *',
       [updatedTitle, updatedCompleted, id]
@@ -83,7 +83,10 @@ router.patch('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM todos WHERE id = $1', [id]);
+    const result = await pool.query('DELETE FROM todos WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'TODOが見つかりません' });
+    }
     res.status(200).json({ message: '削除しました' });
   } catch (err) {
     console.error('DELETE /todos/:id エラー:', err.message);
